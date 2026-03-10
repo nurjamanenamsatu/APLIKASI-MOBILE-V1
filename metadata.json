@@ -1,0 +1,7 @@
+{
+  "name": "APLIKASI MOBILE V1",
+  "description": "A modern, educational-themed link management system with role-based access control and image-based dashboards.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
