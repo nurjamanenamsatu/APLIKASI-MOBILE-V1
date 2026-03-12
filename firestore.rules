@@ -1,0 +1,221 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required)
+    //   - role: string (required, 'admin', 'teacher', 'student')
+    //   - fullName: string (required)
+    //   - active: boolean (required)
+    //   - createdAt: timestamp (optional)
+    //
+    // Collection: links
+    // Document ID: {linkId}
+    // Fields:
+    //   - title: string (required)
+    //   - url: string (required)
+    //   - imageUrl: string (required)
+    //   - category: string (required)
+    //   - clicks: number (required)
+    //   - createdAt: timestamp (optional)
+    //
+    // Collection: information
+    // Document ID: {infoId}
+    // Fields:
+    //   - title: string (required)
+    //   - content: string (required)
+    //   - date: string (required)
+    //   - category: string (required)
+    //   - active: boolean (required)
+    //   - createdAt: timestamp (optional)
+    //
+    // Collection: settings
+    // Document ID: {settingId}
+    // Fields:
+    //   - appName: string (required)
+    //   - logoUrl: string (optional)
+    //   - loginBackgroundUrl: string (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && (
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+        (request.auth.token.email == "nurjaman612021@gmail.com" && request.auth.token.email_verified == true)
+      );
+    }
+
+    function isTeacher() {
+      return isAuthenticated() && (
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher'
+      );
+    }
+
+    function isStudent() {
+      return isAuthenticated() && (
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'student'
+      );
+    }
+
+    function isActiveUser() {
+      return isAuthenticated() && (
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.active == true) ||
+        (request.auth.token.email == "nurjaman612021@gmail.com" && request.auth.token.email_verified == true)
+      );
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+    
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUrl(url) {
+      return url is string && (url.matches("^https://.*") || url.matches("^http://.*") || url == "");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['uid', 'email', 'role', 'fullName', 'active', 'createdAt']) &&
+             hasRequiredFields(['uid', 'email', 'role', 'fullName', 'active']) &&
+             data.uid is string && data.uid.size() > 0 && data.uid.size() < 100 &&
+             isValidEmail(data.email) && data.email.size() < 100 &&
+             data.role in ['admin', 'teacher', 'student'] &&
+             data.fullName is string && data.fullName.size() > 0 && data.fullName.size() < 100 &&
+             data.active is bool &&
+             (!('createdAt' in data) || data.createdAt is timestamp || data.createdAt is string || data.createdAt is number);
+    }
+
+    function isValidLink(data) {
+      return hasOnlyAllowedFields(['title', 'url', 'imageUrl', 'category', 'clicks', 'createdAt']) &&
+             hasRequiredFields(['title', 'url', 'imageUrl', 'category', 'clicks']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 100 &&
+             isValidUrl(data.url) && data.url.size() < 500 &&
+             (data.imageUrl == "" || isValidUrl(data.imageUrl)) && data.imageUrl.size() < 500 &&
+             data.category is string && data.category.size() < 50 &&
+             data.clicks is number && data.clicks >= 0 &&
+             (!('createdAt' in data) || data.createdAt is timestamp || data.createdAt is string || data.createdAt is number);
+    }
+
+    function isValidInformation(data) {
+      return hasOnlyAllowedFields(['title', 'content', 'date', 'category', 'active', 'createdAt']) &&
+             hasRequiredFields(['title', 'content', 'date', 'category', 'active']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.content is string && data.content.size() < 5000 &&
+             data.date is string && data.date.size() < 50 &&
+             data.category is string && data.category.size() < 50 &&
+             data.active is bool &&
+             (!('createdAt' in data) || data.createdAt is timestamp || data.createdAt is string || data.createdAt is number);
+    }
+
+    function isValidSettings(data) {
+      return hasOnlyAllowedFields(['appName', 'logoUrl', 'loginBackgroundUrl']) &&
+             hasRequiredFields(['appName']) &&
+             data.appName is string && data.appName.size() > 0 && data.appName.size() < 100 &&
+             (!('logoUrl' in data) || data.logoUrl == null || data.logoUrl == "" || (isValidUrl(data.logoUrl) && data.logoUrl.size() < 500)) &&
+             (!('loginBackgroundUrl' in data) || data.loginBackgroundUrl == null || data.loginBackgroundUrl == "" || (isValidUrl(data.loginBackgroundUrl) && data.loginBackgroundUrl.size() < 500));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      // Users can read their own profile. Admins can read all profiles.
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Only admins can create users, EXCEPT the default admin who can bootstrap themselves
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (
+        isAdmin() || 
+        (isOwner(userId) && request.resource.data.role == 'admin' && request.auth.token.email == "nurjaman612021@gmail.com")
+      );
+      
+      // Users can update their own profile (but not their role/active status). Admins can update anything.
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (
+        isAdmin() || 
+        (isOwner(userId) && 
+         request.resource.data.role == resource.data.role && 
+         request.resource.data.active == resource.data.active &&
+         request.resource.data.uid == resource.data.uid)
+      );
+      
+      // Only admins can delete users
+      allow delete: if isAdmin();
+    }
+
+    match /links/{linkId} {
+      // Any authenticated active user can read links
+      allow read: if isActiveUser();
+      
+      // Admins and teachers can create links
+      allow create: if (isAdmin() || isTeacher()) && isValidLink(request.resource.data);
+      
+      // Admins and teachers can update links. Students can ONLY increment clicks.
+      allow update: if isActiveUser() && isValidLink(request.resource.data) && (
+        isAdmin() || isTeacher() || 
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clicks']) &&
+          request.resource.data.clicks == resource.data.clicks + 1
+        )
+      );
+      
+      // Admins and teachers can delete links
+      allow delete: if isAdmin() || isTeacher();
+    }
+
+    match /information/{infoId} {
+      // Any authenticated active user can read information
+      allow read: if isActiveUser();
+      
+      // Admins and teachers can create information
+      allow create: if (isAdmin() || isTeacher()) && isValidInformation(request.resource.data);
+      
+      // Admins and teachers can update information
+      allow update: if (isAdmin() || isTeacher()) && isValidInformation(request.resource.data);
+      
+      // Admins and teachers can delete information
+      allow delete: if isAdmin() || isTeacher();
+    }
+
+    match /settings/{settingId} {
+      // Any authenticated active user can read settings
+      allow read: if true; // Settings are public for login page
+      
+      // Only admins can create/update/delete settings
+      allow create: if isAdmin() && isValidSettings(request.resource.data);
+      allow update: if isAdmin() && isValidSettings(request.resource.data);
+      allow delete: if isAdmin();
+    }
+  }
+}

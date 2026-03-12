@@ -47,7 +47,7 @@ const Layout: React.FC<LayoutProps> = ({ auth, onLogout }) => {
     document.title = settings.appName || 'EduLink Pro';
   }, [settings.appName]);
 
-  const isAdminOrStaff = auth.user?.role === UserRole.ADMIN || auth.user?.role === UserRole.STAFF;
+  const isAdminOrTeacher = auth.user?.role === UserRole.ADMIN || auth.user?.role === UserRole.TEACHER;
   const isAdmin = auth.user?.role === UserRole.ADMIN;
 
   const handleLogout = () => {
@@ -60,19 +60,19 @@ const Layout: React.FC<LayoutProps> = ({ auth, onLogout }) => {
       title: 'Dashboard',
       path: '/',
       icon: LayoutDashboard,
-      show: isAdminOrStaff
+      show: isAdminOrTeacher
     },
     {
       title: 'Manajemen Tautan',
       path: '/links',
       icon: LinkIcon,
-      show: isAdminOrStaff
+      show: isAdminOrTeacher
     },
     {
       title: 'Manajemen Informasi',
       path: '/information',
       icon: Bell,
-      show: isAdminOrStaff
+      show: isAdminOrTeacher
     },
     {
       title: 'Manajemen Pengguna',
@@ -113,12 +113,12 @@ const Layout: React.FC<LayoutProps> = ({ auth, onLogout }) => {
     );
   };
 
-  const isViewer = auth.user?.role === UserRole.VIEWER;
+  const isStudent = auth.user?.role === UserRole.STUDENT;
 
   return (
     <div className="flex min-h-screen bg-slate-50">
       {/* Sidebar - Desktop */}
-      {!isViewer && (
+      {!isStudent && (
         <aside className="hidden lg:flex flex-col w-72 bg-white border-r sticky top-0 h-screen p-6">
           <div className="flex items-center gap-3 mb-10 px-2">
             {settings.logoUrl ? (
@@ -159,10 +159,10 @@ const Layout: React.FC<LayoutProps> = ({ auth, onLogout }) => {
       )}
 
       {/* Mobile Sidebar overlay and mobile drawer code remains similar but using new menuItems */}
-      {isSidebarOpen && !isViewer && (
+      {isSidebarOpen && !isStudent && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 lg:hidden" onClick={() => setIsSidebarOpen(false)} />
       )}
-      {!isViewer && (
+      {!isStudent && (
         <aside className={`fixed top-0 left-0 bottom-0 w-80 bg-white z-50 transform transition-transform duration-300 lg:hidden p-6 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="flex items-center justify-between mb-10 px-2">
             <div className="flex items-center gap-3">
@@ -182,13 +182,13 @@ const Layout: React.FC<LayoutProps> = ({ auth, onLogout }) => {
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         <header className="bg-white border-b px-4 lg:px-8 py-4 flex items-center justify-between z-30 shrink-0 shadow-sm">
           <div className="flex items-center gap-4">
-            {!isViewer && (
+            {!isStudent && (
               <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-slate-500 lg:hidden bg-slate-50 rounded-lg"><Menu className="w-6 h-6" /></button>
             )}
             <h2 className="font-bold text-slate-800 text-lg hidden lg:block">
               {menuItems.find(m => m.path === location.pathname)?.title || 'SMAN 117'}
             </h2>
-            <div className={`flex items-center gap-2 ${isViewer ? '' : 'lg:hidden'}`}>
+            <div className={`flex items-center gap-2 ${isStudent ? '' : 'lg:hidden'}`}>
                {settings.logoUrl ? (
                  <img src={settings.logoUrl} alt="Logo" className="w-6 h-6 object-contain" />
                ) : (

@@ -10,48 +10,105 @@ import InformationManager from './pages/InformationManager';
 import ProfileSettings from './pages/ProfileSettings';
 import Layout from './components/Layout';
 import { User, UserRole, AuthState } from './types';
+import { auth, db, logOut } from './firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDocFromServer } from 'firebase/firestore';
 
 const App: React.FC = () => {
-  const [auth, setAuth] = useState<AuthState>(() => {
-    const saved = localStorage.getItem('edulink_auth');
-    return saved ? JSON.parse(saved) : { user: null, isAuthenticated: false };
-  });
+  const [authState, setAuthState] = useState<AuthState>({ user: null, isAuthenticated: false });
+  const [isAuthReady, setIsAuthReady] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('edulink_auth', JSON.stringify(auth));
-  }, [auth]);
+    async function testConnection() {
+      try {
+        await getDocFromServer(doc(db, 'test', 'connection'));
+      } catch (error) {
+        if(error instanceof Error && error.message.includes('the client is offline')) {
+          console.error("Please check your Firebase configuration. ");
+        }
+      }
+    }
+    testConnection();
 
-  const login = (user: User) => {
-    setAuth({ user, isAuthenticated: true });
-  };
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // Fetch user profile from Firestore
+        try {
+          const userDoc = await getDocFromServer(doc(db, 'users', firebaseUser.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data() as User;
+            if (userData.active) {
+              setAuthState({ user: userData, isAuthenticated: true });
+            } else {
+              setAuthState({ user: null, isAuthenticated: false });
+              await logOut();
+              alert("Akun Anda dinonaktifkan. Hubungi admin.");
+            }
+          } else {
+            // If user doesn't exist in Firestore but is logged in via Google
+            // We might need to handle bootstrapping the first admin here
+            if (firebaseUser.email === "nurjaman612021@gmail.com") {
+               const newAdmin: User = {
+                 id: firebaseUser.uid,
+                 uid: firebaseUser.uid,
+                 username: firebaseUser.email.split('@')[0],
+                 email: firebaseUser.email,
+                 role: UserRole.ADMIN,
+                 fullName: firebaseUser.displayName || 'Administrator',
+                 active: true
+               };
+               setAuthState({ user: newAdmin, isAuthenticated: true });
+            } else {
+               setAuthState({ user: null, isAuthenticated: false });
+               await logOut();
+               alert("Akun belum terdaftar di sistem. Hubungi admin.");
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+          setAuthState({ user: null, isAuthenticated: false });
+        }
+      } else {
+        setAuthState({ user: null, isAuthenticated: false });
+      }
+      setIsAuthReady(true);
+    });
 
-  const logout = () => {
-    setAuth({ user: null, isAuthenticated: false });
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await logOut();
+    setAuthState({ user: null, isAuthenticated: false });
   };
 
   const refreshAuth = (updatedUser: User) => {
-    setAuth(prev => ({ ...prev, user: updatedUser }));
+    setAuthState(prev => ({ ...prev, user: updatedUser }));
   };
+
+  if (!isAuthReady) {
+    return <div className="min-h-screen flex items-center justify-center bg-indigo-50">Loading...</div>;
+  }
 
   return (
     <HashRouter>
       <Routes>
         <Route 
           path="/login" 
-          element={!auth.isAuthenticated ? <Login onLogin={login} /> : <Navigate to="/" />} 
+          element={!authState.isAuthenticated ? <Login /> : <Navigate to="/" />} 
         />
         
-        <Route path="/" element={auth.isAuthenticated ? <Layout auth={auth} onLogout={logout} /> : <Navigate to="/login" />}>
+        <Route path="/" element={authState.isAuthenticated ? <Layout auth={authState} onLogout={handleLogout} /> : <Navigate to="/login" />}>
           <Route index element={
-            auth.user?.role === UserRole.ADMIN || auth.user?.role === UserRole.STAFF 
-            ? <AdminDashboard auth={auth} /> 
-            : <ClientDashboard auth={auth} />
+            authState.user?.role === UserRole.ADMIN || authState.user?.role === UserRole.TEACHER 
+            ? <AdminDashboard auth={authState} /> 
+            : <ClientDashboard auth={authState} />
           } />
-          <Route path="links" element={<AppLinkManager auth={auth} />} />
-          <Route path="users" element={<UserManager auth={auth} />} />
-          <Route path="information" element={<InformationManager auth={auth} />} />
-          <Route path="profile" element={<ProfileSettings auth={auth} onUpdate={refreshAuth} />} />
-          <Route path="client" element={<ClientDashboard auth={auth} />} />
+          <Route path="links" element={<AppLinkManager auth={authState} />} />
+          <Route path="users" element={<UserManager auth={authState} />} />
+          <Route path="information" element={<InformationManager auth={authState} />} />
+          <Route path="profile" element={<ProfileSettings auth={authState} onUpdate={refreshAuth} />} />
+          <Route path="client" element={<ClientDashboard auth={authState} />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" />} />

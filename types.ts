@@ -1,14 +1,16 @@
 
 export enum UserRole {
   ADMIN = 'admin',
-  STAFF = 'staf',
-  VIEWER = 'viewer'
+  TEACHER = 'teacher',
+  STUDENT = 'student'
 }
 
 export interface User {
   id: string;
+  uid?: string;
   username: string;
   password?: string;
+  email?: string;
   role: UserRole;
   fullName: string;
   active: boolean;
@@ -51,14 +53,14 @@ export interface RolePermission {
 export const ROLE_PERMISSIONS: RolePermission[] = [
   {
     role: UserRole.ADMIN,
-    capabilities: ['Full access', 'User management', 'Link CRUD', 'View statistics', 'Information management', 'System settings']
+    capabilities: ['Akses Penuh', 'Manajemen Pengguna', 'Manajemen Tautan', 'Lihat Statistik', 'Manajemen Informasi', 'Pengaturan Sistem']
   },
   {
-    role: UserRole.STAFF,
-    capabilities: ['Link CRUD', 'Information management', 'View statistics']
+    role: UserRole.TEACHER,
+    capabilities: ['Manajemen Tautan', 'Manajemen Informasi', 'Lihat Statistik']
   },
   {
-    role: UserRole.VIEWER,
-    capabilities: ['View links', 'Read information', 'Personal portal access']
+    role: UserRole.STUDENT,
+    capabilities: ['Lihat Tautan', 'Baca Informasi', 'Akses Portal Personal']
   }
 ];

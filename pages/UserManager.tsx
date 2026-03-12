@@ -24,8 +24,8 @@ const UserManager: React.FC<UserManagerProps> = ({ auth }) => {
     const saved = localStorage.getItem('edulink_users');
     const initialUsers: User[] = [
       { id: '1', username: 'admin', password: 'admin', fullName: 'Administrator', role: UserRole.ADMIN, active: true },
-      { id: '2', username: 'staf01', password: 'staf', fullName: 'Staff Akademik', role: UserRole.STAFF, active: true },
-      { id: '3', username: 'viewer01', password: 'viewer', fullName: 'Mahasiswa', role: UserRole.VIEWER, active: true },
+      { id: '2', username: 'guru01', password: 'guru', fullName: 'Guru Akademik', role: UserRole.TEACHER, active: true },
+      { id: '3', username: 'siswa01', password: 'siswa', fullName: 'Siswa', role: UserRole.STUDENT, active: true },
     ];
     return saved ? JSON.parse(saved) : initialUsers;
   });
@@ -37,7 +37,7 @@ const UserManager: React.FC<UserManagerProps> = ({ auth }) => {
     username: '',
     password: '',
     fullName: '',
-    role: UserRole.VIEWER
+    role: UserRole.STUDENT
   });
 
   useEffect(() => {
@@ -105,7 +105,7 @@ const UserManager: React.FC<UserManagerProps> = ({ auth }) => {
       });
     } else {
       setEditingUser(null);
-      setFormData({ username: '', password: '', fullName: '', role: UserRole.VIEWER });
+      setFormData({ username: '', password: '', fullName: '', role: UserRole.STUDENT });
     }
     setIsModalOpen(true);
   };
@@ -123,8 +123,8 @@ const UserManager: React.FC<UserManagerProps> = ({ auth }) => {
   const getRoleBadge = (role: UserRole) => {
     switch(role) {
       case UserRole.ADMIN: return <span className="bg-rose-50 text-rose-600 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Administrator</span>;
-      case UserRole.STAFF: return <span className="bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Staff</span>;
-      default: return <span className="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Viewer</span>;
+      case UserRole.TEACHER: return <span className="bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Guru</span>;
+      default: return <span className="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Siswa</span>;
     }
   };
 
@@ -325,8 +325,8 @@ const UserManager: React.FC<UserManagerProps> = ({ auth }) => {
                   className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                 >
                   <option value={UserRole.ADMIN}>Administrator (Akses Penuh)</option>
-                  <option value={UserRole.STAFF}>Staff Akademik (Manajemen Link)</option>
-                  <option value={UserRole.VIEWER}>Viewer / Mahasiswa (Hanya Lihat)</option>
+                  <option value={UserRole.TEACHER}>Guru (Manajemen Link & Info)</option>
+                  <option value={UserRole.STUDENT}>Siswa (Hanya Lihat)</option>
                 </select>
               </div>
               
